@@ -16,7 +16,8 @@ def crear_exe(script_path):
         "--clean",                   # Limpiar caché de PyInstaller
         "--noconsole",               # Ocultar consola al ejecutar .exe
         "--name", "ComboToolProGUI",          # Nombre del ejecutable
-        "--hidden-import", "customtkinter", 
+        "--hidden-import", "customtkinter",
+
         f"{script_path}"             # Ruta del script .py
     ]
 

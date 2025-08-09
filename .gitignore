@@ -34,3 +34,4 @@ env/
 
 # Logs
 *.log
+*.spec
