@@ -1,2 +1,4 @@
 customtkinter
+easygui
+colorama
 pyinstaller
