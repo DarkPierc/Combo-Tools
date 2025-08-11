@@ -38,7 +38,11 @@ env/
 
 extraermailv2.py
 resultados/
-ResultadosLogToULP/
+ResultadosLogsToULP/
+ResultadosBusquedaLogs/
+main_optimizado.py
+scriptsBase/
+
 LOGS.py
 logstotxt.py
 

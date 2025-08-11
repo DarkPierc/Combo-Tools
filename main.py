@@ -1,3 +1,11 @@
+# Versión optimizada del script
+# Cambios:
+# 1. Menos operaciones de disco.
+# 2. Eliminación de duplicados más eficiente.
+# 3. Uso de variables locales para no recalcular splits.
+# 4. Lectura de archivos línea por línea cuando es posible.
+# 5. Uso de más hilos dependiendo de la CPU.
+
 import customtkinter as ctk
 from tkinter import simpledialog, filedialog, messagebox
 import re
@@ -323,9 +331,9 @@ boton_buscar_logs.pack(side="left", padx=5, pady=5, expand=True)
 def logstoulp_gui():
     colorama.init()
     
-    # Asegurar que existe la carpeta ResultadosLogToULP
-    if not os.path.exists(os.path.join(os.getcwd(), "ResultadosLogToULP")):
-        os.mkdir("ResultadosLogToULP")
+    # Asegurar que existe la carpeta ResultadosLogsToULP
+    if not os.path.exists(os.path.join(os.getcwd(), "ResultadosLogsToULP")):
+        os.mkdir("ResultadosLogsToULP")
     
     # Crear ventana de progreso
     progreso_ventana = ctk.CTkToplevel(ventana)
@@ -346,33 +354,23 @@ def logstoulp_gui():
     progreso_ventana.update()
     
     def actualizar_progreso(mensaje, color=None):
-        # Asegurar que la actualización se realiza en el hilo principal
         def _actualizar():
-            if color:
-                # En customtkinter no se pueden pasar colores directamente como en tkinter
-                # Insertamos el texto normalmente
-                texto_progreso.insert(ctk.END, mensaje + "\n")
-            else:
-                texto_progreso.insert(ctk.END, mensaje + "\n")
+            texto_progreso.insert(ctk.END, mensaje + "\n")
             texto_progreso.see(ctk.END)
-            progreso_ventana.update()
-        
-        # Si estamos en el hilo principal, actualizar directamente
+            progreso_ventana.update_idletasks()
+
+        # Si no estamos en el hilo principal, usar after para evitar el error
         if threading.current_thread() is threading.main_thread():
             _actualizar()
         else:
-            # Si estamos en un hilo secundario, programar la actualización en el hilo principal
-            # Usar try-except para manejar posibles errores si la ventana ya no existe
             try:
                 ventana.after(0, _actualizar)
-            except Exception as e:
-                print(f"Error al actualizar progreso: {str(e)}")
-                # Intentar con progreso_ventana si ventana falla
+            except:
                 try:
                     progreso_ventana.after(0, _actualizar)
                 except:
-                    pass  # Si ambos fallan, simplemente ignoramos la actualización
-    
+                    pass
+
     class EVO:
         def ui(self):
             actualizar_progreso("LOG TO TXT -  BY @BulletPierce")
@@ -506,8 +504,8 @@ def logstoulp_gui():
 
         def main(self):
             self.ui()
-            if not os.path.exists(os.path.join(os.getcwd(), "ResultadosLogToULP")):
-                os.mkdir("ResultadosLogToULP")
+            if not os.path.exists(os.path.join(os.getcwd(), "ResultadosLogsToULP")):
+                os.mkdir("ResultadosLogsToULP")
             
             # Usar filedialog en lugar de easygui para mantener consistencia con la interfaz
             logs = filedialog.askdirectory(title="Selecciona la carpeta de logs")
@@ -516,7 +514,7 @@ def logstoulp_gui():
                 return
                 
             actualizar_progreso(f"Carpeta seleccionada: {logs}")
-            s = self.datetimefolder(os.path.join(os.getcwd(), "ResultadosLogToULP"))
+            s = self.datetimefolder(os.path.join(os.getcwd(), "ResultadosLogsToULP"))
             actualizar_progreso(f"Resultados se guardarán en: {s}")
             
             # Ejecutar el procesamiento en un hilo separado para no bloquear la interfaz
@@ -592,10 +590,10 @@ def buscar_en_logs_gui():
     
     palabras_buscar = [palabra.strip() for palabra in palabras_input.split(',')]
     
-    # Ruta absoluta para guardar los ResultadosLogsToULP
-    carpeta_ResultadosLogsToULP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ResultadosLogsToULP")
-    if not os.path.exists(carpeta_ResultadosLogsToULP):
-        os.makedirs(carpeta_ResultadosLogsToULP)
+    # Ruta absoluta para guardar los ResultadosBusquedaLogs
+    carpeta_ResultadosBusquedaLogs = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ResultadosBusquedaLogs")
+    if not os.path.exists(carpeta_ResultadosBusquedaLogs):
+        os.makedirs(carpeta_ResultadosBusquedaLogs)
     
     # Crear ventana de progreso
     progreso_ventana = ctk.CTkToplevel(ventana)
@@ -609,7 +607,7 @@ def buscar_en_logs_gui():
     
     contador_txt = 0
     coincidencias = {palabra: 0 for palabra in palabras_buscar}
-    ResultadosLogsToULP = {palabra: [] for palabra in palabras_buscar}
+    ResultadosBusquedaLogs = {palabra: [] for palabra in palabras_buscar}
     
     # Expresión regular para encontrar las líneas con USER:PASS
     regex = re.compile(r"USER:\s*(\S+)\s*PASS:\s*(\S+)")
@@ -645,39 +643,39 @@ def buscar_en_logs_gui():
                             for match in regex.findall(contenido):
                                 usuario = match[0]
                                 contrasena = match[1]
-                                ResultadosLogsToULP[palabra].append(f"{usuario}:{contrasena}")
+                                ResultadosBusquedaLogs[palabra].append(f"{usuario}:{contrasena}")
                     actualizar_progreso("-" * 40)
         
         actualizar_progreso(f"\nTotal de archivos .txt encontrados: {contador_txt}")
         for palabra, cantidad in coincidencias.items():
             actualizar_progreso(f"Total de archivos que contienen '{palabra}': {cantidad}")
 
-        # Mostrar los ResultadosLogsToULP antes de guardarlos
-        actualizar_progreso("\nResultadosLogsToULP encontrados:")
-        ResultadosLogsToULP_totales = []
-        for palabra, lineas in ResultadosLogsToULP.items():
+        # Mostrar los ResultadosBusquedaLogs antes de guardarlos
+        actualizar_progreso("\nResultadosBusquedaLogs encontrados:")
+        ResultadosBusquedaLogs_totales = []
+        for palabra, lineas in ResultadosBusquedaLogs.items():
             if lineas:
                 actualizar_progreso(f'Palabra: {palabra}')
                 for linea in lineas:
                     actualizar_progreso(linea)
-                    ResultadosLogsToULP_totales.append(linea)
+                    ResultadosBusquedaLogs_totales.append(linea)
                 actualizar_progreso("-" * 40)
 
-        # Guardar los ResultadosLogsToULP en archivos separados por palabra dentro de la carpeta 'ResultadosLogsToULP'
-        for palabra, lineas in ResultadosLogsToULP.items():
+        # Guardar los ResultadosBusquedaLogs en archivos separados por palabra dentro de la carpeta 'ResultadosBusquedaLogs'
+        for palabra, lineas in ResultadosBusquedaLogs.items():
             if lineas:
-                ruta_ResultadosLogToULPado = os.path.join(carpeta_ResultadosLogsToULP, f'{palabra}.txt')
+                ruta_ResultadosLogsToULPado = os.path.join(carpeta_ResultadosBusquedaLogs, f'{palabra}.txt')
                 try:
-                    with open(ruta_ResultadosLogToULPado, 'w', encoding='utf-8') as f:
+                    with open(ruta_ResultadosLogsToULPado, 'w', encoding='utf-8') as f:
                         for linea in lineas:
                             f.write(f'{linea}\n')
-                    actualizar_progreso(f'Los ResultadosLogsToULP para la palabra "{palabra}" se han guardado en {ruta_ResultadosLogToULPado}')
+                    actualizar_progreso(f'Los ResultadosBusquedaLogs para la palabra "{palabra}" se han guardado en {ruta_ResultadosLogsToULPado}')
                 except Exception as e:
-                    actualizar_progreso(f"Error al guardar el archivo {ruta_ResultadosLogToULPado}: {e}")
+                    actualizar_progreso(f"Error al guardar el archivo {ruta_ResultadosLogsToULPado}: {e}")
         
-        # Mostrar ResultadosLogsToULP en la interfaz principal
+        # Mostrar ResultadosBusquedaLogs en la interfaz principal
         texto_salida.delete(1.0, ctk.END)
-        texto_salida.insert(ctk.END, "\n".join(ResultadosLogsToULP_totales))
+        texto_salida.insert(ctk.END, "\n".join(ResultadosBusquedaLogs_totales))
         actualizar_contador_lineas()
         
         # Agregar botón para cerrar la ventana de progreso
