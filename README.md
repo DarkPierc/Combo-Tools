@@ -28,6 +28,20 @@ ComboToolPro GUI es una aplicación diseñada para procesar y manipular listas d
 git clone https://github.com/DarkPierc/Combo-Tools.git
 cd Combo-Tools
 ```
+### 1.1 Cambiar a la rama ULP 
+En la rama ULP se encuentra la última versión estable del proyecto que incluye las opciones extraer logs y buscar en logs.
+Estas opciones están disponibles en la pestaña de herramientas de la interfaz gráfica.
+
+```bash
+git checkout ulp
+```
+
+### 1.2 Actualizar la rama main con los cambios remotos
+
+```bash
+git pull origin main
+```
+
 
 ### 2. Crear y activar entorno virtual (Windows)
 

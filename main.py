@@ -1,8 +1,16 @@
 import customtkinter as ctk
-from tkinter import simpledialog
+from tkinter import simpledialog, filedialog, messagebox
 import re
 import os
 import random
+import sys
+import threading
+from pathlib import Path
+import easygui
+import colorama
+import ctypes
+from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 
 # Configuración de apariencia
 ctk.set_appearance_mode("Dark")  # Modo oscuro
@@ -300,6 +308,383 @@ boton_combinar.pack(side="left", padx=5, pady=5, expand=True)
 
 boton_guardar = ctk.CTkButton(frame_botones2, text="Guardar Salida", command=guardar_salida)
 boton_guardar.pack(side="left", padx=5, pady=5, expand=True)
+
+# Tercera fila de botones para las nuevas funcionalidades
+frame_botones3 = ctk.CTkFrame(frame_principal)
+frame_botones3.grid(row=6, column=0, pady=5, sticky="ew")
+
+boton_logstoulp = ctk.CTkButton(frame_botones3, text="LogsToULP", command=lambda: logstoulp_gui())
+boton_logstoulp.pack(side="left", padx=5, pady=5, expand=True)
+
+boton_buscar_logs = ctk.CTkButton(frame_botones3, text="Buscar en Logs", command=lambda: buscar_en_logs_gui())
+boton_buscar_logs.pack(side="left", padx=5, pady=5, expand=True)
+
+# Función para LogsToULP (adaptada del código proporcionado)
+def logstoulp_gui():
+    colorama.init()
+    
+    # Asegurar que existe la carpeta ResultadosLogToULP
+    if not os.path.exists(os.path.join(os.getcwd(), "ResultadosLogToULP")):
+        os.mkdir("ResultadosLogToULP")
+    
+    # Crear ventana de progreso
+    progreso_ventana = ctk.CTkToplevel(ventana)
+    progreso_ventana.title("LogsToULP - Progreso")
+    progreso_ventana.geometry("600x400")
+    # No usar grab_set() para evitar bloquear la interfaz principal
+    # progreso_ventana.grab_set()  
+    
+    # Mantener la ventana de progreso por encima de la ventana principal
+    progreso_ventana.transient(ventana)
+    progreso_ventana.focus_set()
+    
+    # Área de texto para mostrar progreso
+    texto_progreso = ctk.CTkTextbox(progreso_ventana, wrap="word", height=350)
+    texto_progreso.pack(padx=10, pady=10, fill="both", expand=True)
+    
+    # Asegurar que la ventana de progreso se actualice correctamente
+    progreso_ventana.update()
+    
+    def actualizar_progreso(mensaje, color=None):
+        # Asegurar que la actualización se realiza en el hilo principal
+        def _actualizar():
+            if color:
+                # En customtkinter no se pueden pasar colores directamente como en tkinter
+                # Insertamos el texto normalmente
+                texto_progreso.insert(ctk.END, mensaje + "\n")
+            else:
+                texto_progreso.insert(ctk.END, mensaje + "\n")
+            texto_progreso.see(ctk.END)
+            progreso_ventana.update()
+        
+        # Si estamos en el hilo principal, actualizar directamente
+        if threading.current_thread() is threading.main_thread():
+            _actualizar()
+        else:
+            # Si estamos en un hilo secundario, programar la actualización en el hilo principal
+            # Usar try-except para manejar posibles errores si la ventana ya no existe
+            try:
+                ventana.after(0, _actualizar)
+            except Exception as e:
+                print(f"Error al actualizar progreso: {str(e)}")
+                # Intentar con progreso_ventana si ventana falla
+                try:
+                    progreso_ventana.after(0, _actualizar)
+                except:
+                    pass  # Si ambos fallan, simplemente ignoramos la actualización
+    
+    class EVO:
+        def ui(self):
+            actualizar_progreso("LOG TO TXT -  BY @BulletPierce")
+            actualizar_progreso("Cargando...")
+
+        def get_path_pass(self, path):
+            patho = []
+            for root, dirs, files in os.walk(path):
+                for file in files:
+                    if 'pass' in str(file).lower():
+                        passw = os.path.join(root, file)
+                        patho.append(passw)
+            return set(patho)
+
+        def extract_lines(self, keyword, fi):
+            return_list = []
+            try:
+                with open(fi, "r", errors="ignore", encoding='utf-8') as file:
+                    lines = file.readlines()
+
+                for i, line in enumerate(lines):
+                    if keyword in line:
+                        if i + 2 < len(lines):
+                            captured_lines = lines[i:i + 3]
+                            wiscodes = ''.join(captured_lines)
+                            return_list.append(wiscodes)
+                        else:
+                            continue
+            except Exception as e:
+                actualizar_progreso(f"Error al leer {fi}: {e}")
+            return return_list
+
+        def getinformat(self, list):
+            mayat = []
+            for lines in list:
+                matches = re.findall(r'\w+: (.*?)\n', lines)
+                maza = ':'.join(matches)
+                mayat.append(maza)
+            return mayat
+
+        def datetimefolder(self, path):
+            current_datetime = datetime.now().strftime("%m-%d-%y_%H-%M-%S")
+            shia = os.path.join(path, current_datetime)
+            os.mkdir(shia)
+            return shia
+
+        def main_converter(self, path, dt):
+            try:
+                # Informar que estamos procesando este archivo
+                actualizar_progreso(f"Procesando: {path}")
+                
+                # Buscar líneas con diferentes palabras clave
+                some = self.extract_lines("URL", path)
+                if not some:  # Usar not some en lugar de some == []
+                    some = self.extract_lines("url", path)
+                    if not some:
+                        some = self.extract_lines("Host", path)
+                
+                # Si no encontramos nada, informar y salir
+                if not some:
+                    actualizar_progreso(f"No se encontraron datos en: {path}")
+                    return
+                
+                # Procesar los resultados
+                mose = self.getinformat(some)
+                if not mose:
+                    actualizar_progreso(f"No se pudieron extraer datos formateados de: {path}")
+                    return
+                
+                # Guardar los resultados
+                op = os.path.join(dt, f"url_pass_log.txt")
+                with open(op, 'a', errors='ignore', encoding='utf-8') as output_file:
+                    for lines in mose:
+                        clean_lines = str(lines).replace("https://", "").replace("http://", '')
+                        output_file.write(clean_lines + "\n")
+                
+                actualizar_progreso(f"[*] Procesamiento completado para: {path}", "green")
+            except Exception as e:
+                actualizar_progreso(f"Error al procesar {path}: {str(e)}")
+                return None
+
+        def runner(self, path, dt):
+            # Obtener la lista de archivos a procesar
+            archivos = self.get_path_pass(path)
+            if not archivos:
+                actualizar_progreso("No se encontraron archivos con 'pass' en el nombre. Buscando en todos los archivos...")
+                # Si no hay archivos con 'pass', buscar en todos los archivos .txt
+                for root, dirs, files in os.walk(path):
+                    for file in files:
+                        if file.endswith('.txt'):
+                            archivos.add(os.path.join(root, file))
+            
+            if not archivos:
+                actualizar_progreso("No se encontraron archivos para procesar.")
+                return
+            
+            actualizar_progreso(f"Se encontraron {len(archivos)} archivos para procesar.")
+            
+            # Procesar los archivos en paralelo
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                # Crear una lista para almacenar los futuros
+                futures = []
+                
+                # Enviar cada archivo para procesamiento
+                for archivo in archivos:
+                    try:
+                        future = executor.submit(self.main_converter, archivo, dt)
+                        futures.append(future)
+                    except Exception as e:
+                        actualizar_progreso(f"Error al enviar {archivo} para procesamiento: {str(e)}")
+                
+                # Esperar a que todos los futuros se completen
+                for future in futures:
+                    try:
+                        future.result()  # Esto bloqueará hasta que el futuro se complete
+                    except Exception as e:
+                        actualizar_progreso(f"Error en un hilo de procesamiento: {str(e)}")
+            
+            actualizar_progreso("Procesamiento de todos los archivos completado.")
+            actualizar_progreso(f"Resultados guardados en: {os.path.join(dt, 'url_pass_log.txt')}")
+            
+            # Verificar si se generaron resultados
+            resultado_path = os.path.join(dt, "url_pass_log.txt")
+            if os.path.exists(resultado_path):
+                try:
+                    with open(resultado_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        lineas = f.readlines()
+                    actualizar_progreso(f"Se extrajeron {len(lineas)} líneas de datos.")
+                except Exception as e:
+                    actualizar_progreso(f"Error al verificar resultados: {str(e)}")
+
+        def main(self):
+            self.ui()
+            if not os.path.exists(os.path.join(os.getcwd(), "ResultadosLogToULP")):
+                os.mkdir("ResultadosLogToULP")
+            
+            # Usar filedialog en lugar de easygui para mantener consistencia con la interfaz
+            logs = filedialog.askdirectory(title="Selecciona la carpeta de logs")
+            if not logs:
+                actualizar_progreso("Operación cancelada por el usuario.")
+                return
+                
+            actualizar_progreso(f"Carpeta seleccionada: {logs}")
+            s = self.datetimefolder(os.path.join(os.getcwd(), "ResultadosLogToULP"))
+            actualizar_progreso(f"Resultados se guardarán en: {s}")
+            
+            # Ejecutar el procesamiento en un hilo separado para no bloquear la interfaz
+            def procesar_en_segundo_plano():
+                try:
+                    self.runner(logs, s)
+                    
+                    # Mostrar resultados en la interfaz principal
+                    resultado_path = os.path.join(s, "url_pass_log.txt")
+                    if os.path.exists(resultado_path):
+                        try:
+                            with open(resultado_path, 'r', encoding='utf-8', errors='ignore') as f:
+                                contenido = f.read()
+                            # Usar after para actualizar la interfaz desde el hilo principal
+                            ventana.after(0, lambda: texto_salida.delete(1.0, ctk.END))
+                            ventana.after(0, lambda: texto_salida.insert(ctk.END, contenido))
+                            ventana.after(0, actualizar_contador_lineas)
+                            ventana.after(0, lambda: actualizar_progreso(f"Proceso completado. Resultados cargados en la interfaz y guardados en {resultado_path}"))
+                        except Exception as e:
+                            ventana.after(0, lambda: actualizar_progreso(f"Error al cargar resultados: {e}"))
+                    else:
+                        ventana.after(0, lambda: actualizar_progreso("No se encontraron resultados para mostrar."))
+                except Exception as e:
+                    ventana.after(0, lambda: actualizar_progreso(f"Error durante el procesamiento: {str(e)}"))
+            
+            # Iniciar el procesamiento en un hilo separado
+            try:
+                threading_thread = threading.Thread(target=procesar_en_segundo_plano)
+                threading_thread.daemon = True  # El hilo se cerrará cuando se cierre la aplicación
+                threading_thread.start()
+                actualizar_progreso("Procesamiento iniciado en segundo plano...")
+            except Exception as e:
+                actualizar_progreso(f"Error al iniciar el hilo de procesamiento: {str(e)}")
+                # Intentar ejecutar directamente si falla el hilo
+                try:
+                    actualizar_progreso("Intentando ejecutar directamente...")
+                    procesar_en_segundo_plano()
+                except Exception as e2:
+                    actualizar_progreso(f"Error al ejecutar directamente: {str(e2)}")
+    
+    # Botón para cerrar la ventana de progreso
+    def cerrar_ventana_progreso():
+        try:
+            progreso_ventana.destroy()
+        except:
+            pass
+    
+    # Añadir botón para cerrar la ventana
+    ctk.CTkButton(progreso_ventana, text="Cerrar", command=cerrar_ventana_progreso).pack(pady=10)
+    
+    # Configurar el comportamiento al cerrar la ventana con la X
+    progreso_ventana.protocol("WM_DELETE_WINDOW", cerrar_ventana_progreso)
+    
+    # Ejecutar el proceso
+    run = EVO()
+    ventana.after(100, run.main)
+
+# Función para buscar en logs (adaptada de LOGS.py)
+def buscar_en_logs_gui():
+    # Crear ventana de diálogo para seleccionar carpeta
+    ruta_carpeta = filedialog.askdirectory(title="Selecciona la carpeta donde buscar")
+    if not ruta_carpeta:
+        return
+    
+    if not os.path.exists(ruta_carpeta):
+        messagebox.showerror("Error", f"La carpeta '{ruta_carpeta}' no existe.")
+        return
+    
+    # Pedir palabras a buscar
+    palabras_input = simpledialog.askstring("Buscar", "Ingrese las palabras a buscar (separadas por comas):", parent=ventana)
+    if not palabras_input:
+        return
+    
+    palabras_buscar = [palabra.strip() for palabra in palabras_input.split(',')]
+    
+    # Ruta absoluta para guardar los ResultadosLogsToULP
+    carpeta_ResultadosLogsToULP = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ResultadosLogsToULP")
+    if not os.path.exists(carpeta_ResultadosLogsToULP):
+        os.makedirs(carpeta_ResultadosLogsToULP)
+    
+    # Crear ventana de progreso
+    progreso_ventana = ctk.CTkToplevel(ventana)
+    progreso_ventana.title("Buscando...")
+    progreso_ventana.geometry("500x300")
+    progreso_ventana.grab_set()  # Hacer modal
+    
+    # Área de texto para mostrar progreso
+    texto_progreso = ctk.CTkTextbox(progreso_ventana, wrap="word", height=250)
+    texto_progreso.pack(padx=10, pady=10, fill="both", expand=True)
+    
+    contador_txt = 0
+    coincidencias = {palabra: 0 for palabra in palabras_buscar}
+    ResultadosLogsToULP = {palabra: [] for palabra in palabras_buscar}
+    
+    # Expresión regular para encontrar las líneas con USER:PASS
+    regex = re.compile(r"USER:\s*(\S+)\s*PASS:\s*(\S+)")
+    
+    def actualizar_progreso(mensaje):
+        texto_progreso.insert(ctk.END, mensaje + "\n")
+        texto_progreso.see(ctk.END)
+        progreso_ventana.update()
+    
+    def buscar():
+        nonlocal contador_txt
+        
+        for root, _, files in os.walk(ruta_carpeta):
+            for file in files:
+                if file.endswith(".txt"):
+                    try:
+                        ruta_completa = os.path.join(root, file)
+                        ruta_completa = os.path.normpath(ruta_completa)
+                        contador_txt += 1
+                        actualizar_progreso(f"Leyendo: {ruta_completa}\n")
+                        
+                        with open(ruta_completa, "r", encoding="utf-8", errors='ignore') as f:
+                            contenido = f.read()
+                    except Exception as e:
+                        actualizar_progreso(f"No se pudo leer el archivo {file}: {e}")
+                        continue
+                    
+                    for palabra in palabras_buscar:
+                        if palabra in contenido:
+                            coincidencias[palabra] += 1
+                            actualizar_progreso(f"¡Palabra '{palabra}' encontrada en {file}!")
+                            # Buscar USER:PASS usando la expresión regular
+                            for match in regex.findall(contenido):
+                                usuario = match[0]
+                                contrasena = match[1]
+                                ResultadosLogsToULP[palabra].append(f"{usuario}:{contrasena}")
+                    actualizar_progreso("-" * 40)
+        
+        actualizar_progreso(f"\nTotal de archivos .txt encontrados: {contador_txt}")
+        for palabra, cantidad in coincidencias.items():
+            actualizar_progreso(f"Total de archivos que contienen '{palabra}': {cantidad}")
+
+        # Mostrar los ResultadosLogsToULP antes de guardarlos
+        actualizar_progreso("\nResultadosLogsToULP encontrados:")
+        ResultadosLogsToULP_totales = []
+        for palabra, lineas in ResultadosLogsToULP.items():
+            if lineas:
+                actualizar_progreso(f'Palabra: {palabra}')
+                for linea in lineas:
+                    actualizar_progreso(linea)
+                    ResultadosLogsToULP_totales.append(linea)
+                actualizar_progreso("-" * 40)
+
+        # Guardar los ResultadosLogsToULP en archivos separados por palabra dentro de la carpeta 'ResultadosLogsToULP'
+        for palabra, lineas in ResultadosLogsToULP.items():
+            if lineas:
+                ruta_ResultadosLogToULPado = os.path.join(carpeta_ResultadosLogsToULP, f'{palabra}.txt')
+                try:
+                    with open(ruta_ResultadosLogToULPado, 'w', encoding='utf-8') as f:
+                        for linea in lineas:
+                            f.write(f'{linea}\n')
+                    actualizar_progreso(f'Los ResultadosLogsToULP para la palabra "{palabra}" se han guardado en {ruta_ResultadosLogToULPado}')
+                except Exception as e:
+                    actualizar_progreso(f"Error al guardar el archivo {ruta_ResultadosLogToULPado}: {e}")
+        
+        # Mostrar ResultadosLogsToULP en la interfaz principal
+        texto_salida.delete(1.0, ctk.END)
+        texto_salida.insert(ctk.END, "\n".join(ResultadosLogsToULP_totales))
+        actualizar_contador_lineas()
+        
+        # Agregar botón para cerrar la ventana de progreso
+        ctk.CTkButton(progreso_ventana, text="Cerrar", command=progreso_ventana.destroy).pack(pady=10)
+    
+    # Iniciar búsqueda en un hilo separado para no bloquear la interfaz
+    ventana.after(100, buscar)
 
 # Inicializar contador
 actualizar_contador_lineas()

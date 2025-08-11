@@ -35,3 +35,10 @@ env/
 # Logs
 *.log
 *.spec
+
+extraermailv2.py
+resultados/
+ResultadosLogToULP/
+LOGS.py
+logstotxt.py
+
